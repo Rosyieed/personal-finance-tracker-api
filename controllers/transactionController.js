@@ -198,3 +198,37 @@ exports.getSummary = async (req, res) => {
 
     }
 }
+
+exports.exportCsv = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const transactions = await Transaction.find({ userId })
+            .populate('categoryId', 'name type');
+
+        if (transactions.length === 0) {
+            return res.status(404).json({ message: 'No transactions found for this user' });
+        }
+
+        const csvRows = [];
+        csvRows.push('Date,Category,Type,Amount,Note'); // Header row
+
+        transactions.forEach(transaction => {
+            const date = transaction.date.toISOString().split('T')[0];
+            const categoryName = transaction.categoryId.name;
+            const type = transaction.categoryId.type;
+            const amount = transaction.amount.toLocaleString('en-US');
+            const note = transaction.note || '';
+
+            csvRows.push(`${date},${categoryName},${type},${amount},${note}`);
+        });
+
+        const csvString = csvRows.join('\n');
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment('transactions.csv');
+        res.send(csvString);
+    } catch (error) {
+        console.error('Error exporting CSV:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
