@@ -145,3 +145,56 @@ exports.deleteTransaction = async (req, res) => {
 
     }
 }
+
+exports.getSummary = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const transactions = await Transaction.find({ userId })
+            .populate('categoryId', 'name type');
+
+        if (transactions.length === 0) {
+            return res.status(404).json({ message: 'No transactions found for this user' });
+        }
+
+        // Object to hold the summary
+        const summary = {};
+
+        for (const transaction of transactions) {
+            const categoryName = transaction.categoryId.name;
+            const type = transaction.categoryId.type;
+            const amount = transaction.amount;
+
+            if (!summary[categoryName]) {
+                summary[categoryName] = { income: 0, expense: 0 };
+            }
+
+            if (type === 'income') {
+                summary[categoryName].income += amount;
+            } else if (type === 'expense') {
+                summary[categoryName].expense += amount;
+            }
+        }
+
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        for (const category of Object.values(summary)) {
+            totalIncome += category.income;
+            totalExpense += category.expense;
+        }
+
+        const balance = totalIncome - totalExpense;
+
+        res.status(200).json({
+            message: 'Summary retrieved successfully',
+            summary,
+            totalIncome,
+            totalExpense,
+            balance,
+        });
+    } catch (error) {
+        console.error('Error retrieving summary:', error);
+        res.status(500).json({ message: 'Internal server error' });
+
+    }
+}

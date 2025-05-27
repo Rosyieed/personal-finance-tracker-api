@@ -66,7 +66,7 @@ exports.updateCategory = async (req, res) => {
         return res.status(400).json({ message: 'Name and type are required' });
     }
 
-    if (existingCategory) {
+    if (existingCategory && existingCategory._id.toString() !== id) {
         return res.status(400).json({ message: 'Category with this name already exists' });
     }
 
